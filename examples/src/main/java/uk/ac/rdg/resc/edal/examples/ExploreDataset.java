@@ -52,11 +52,12 @@ import uk.ac.rdg.resc.edal.util.Array4D;
  * @author Guy Griffiths
  */
 public class ExploreDataset {
+	
     public static void main(String[] args) throws EdalException, IOException {
         /*
          * Get the data path
          */
-        URL dataResource = ExploreDataset.class.getResource("/synthetic_data.nc");
+        URL dataResource = ExploreDataset.class.getResource("/1986050100.gmu1.p.aug.nc");
 
         /*
          * Create a DatasetFactory. This can be used to create Datasets
@@ -103,7 +104,7 @@ public class ExploreDataset {
          * dataset.getVariableMetadata() can be used to get metadata about a
          * particular variable
          */
-        GridVariableMetadata variableMetadata = dataset.getVariableMetadata("temperature");
+        GridVariableMetadata variableMetadata = dataset.getVariableMetadata("p");
         System.out.println("The ID of the variable: " + variableMetadata.getId());
 
         /*

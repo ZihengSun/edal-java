@@ -64,7 +64,7 @@ public class DrawPalettes {
             g.drawString(paletteName, 510, vOffset + 20);
             vOffset += 30;
         }
-        String fileLocation = "./palettes.png";
+        String fileLocation = "/palettes.png";
         if(args != null && args.length > 0) {
             fileLocation = args[0];
         }
