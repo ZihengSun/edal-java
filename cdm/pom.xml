@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- POM for core module -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>edal</artifactId>
         <groupId>uk.ac.rdg.resc</groupId>
-        <version>1.4.1</version>
+        <version>1.5.0</version>
         <relativePath>..</relativePath>
     </parent>
     <properties>
-        <netcdfversion>5.0.0-beta2</netcdfversion>
+        <netcdfversion>5.3.2</netcdfversion>
     </properties>
     <artifactId>edal-cdm</artifactId>
     <packaging>jar</packaging>
@@ -22,7 +24,7 @@
         </dependency>
         <dependency>
             <groupId>edu.ucar</groupId>
-            <artifactId>cdm</artifactId>
+            <artifactId>cdm-core</artifactId>
             <version>${netcdfversion}</version>
         </dependency>
         <dependency>
@@ -60,6 +62,11 @@
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
             <version>1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>net.ricecode</groupId>
+            <artifactId>string-similarity</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
     <repositories>

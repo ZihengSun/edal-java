@@ -1670,29 +1670,29 @@ public class WmsServlet extends HttpServlet {
          */
         List<String> scaledLayerRoles = catalogue.getStyleCatalogue()
                 .getScaledRoleForStyle(styleName);
-        String scaledLayerRole = null;
         if (scaledLayerRoles.size() > 0) {
-            scaledLayerRole = scaledLayerRoles.get(0);
-        }
-        if (scaledLayerRole == null) {
+            String scaledLayerRole = scaledLayerRoles.get(0);
+
+            if ("".equals(scaledLayerRole)) {
+                /*
+                 * The named (possibly parent) layer is scaled.
+                 */
+                layerName = layerNames[0];
+            } else {
+                /*
+                 * A child layer is being scaled. Get the WMS layer name
+                 * corresponding to this child variable
+                 */
+                String variableId = variableMetadata.getChildWithRole(scaledLayerRole).getId();
+                layerName = catalogue.getLayerNameMapper().getLayerName(datasetId, variableId);
+            }
+        } else {
             /*
              * No layer has scaling - we can return anything
              */
             minmax.put("min", 0);
             minmax.put("max", 100);
             return minmax.toString();
-        } else if ("".equals(scaledLayerRole)) {
-            /*
-             * The named (possibly parent) layer is scaled.
-             */
-            layerName = layerNames[0];
-        } else {
-            /*
-             * A child layer is being scaled. Get the WMS layer name
-             * corresponding to this child variable
-             */
-            String variableId = variableMetadata.getChildWithRole(scaledLayerRole).getId();
-            layerName = catalogue.getLayerNameMapper().getLayerName(datasetId, variableId);
         }
 
         /*
@@ -1722,7 +1722,8 @@ public class WmsServlet extends HttpServlet {
                 Iterator<Number> iterator = values.iterator();
                 while (iterator.hasNext()) {
                     Number value = iterator.next();
-                    if (value != null && !Double.isNaN(value.doubleValue())) {
+                    if (value != null && !Double.isNaN(value.doubleValue())
+                            && !Double.isInfinite(value.doubleValue())) {
                         max = Math.max(max, value.doubleValue());
                         min = Math.min(min, value.doubleValue());
                     }
@@ -1961,6 +1962,7 @@ public class WmsServlet extends HttpServlet {
                 throw new MetadataException(
                         "Requested layer is either not present, disabled, or not yet loaded.");
             } catch (Exception e) {
+                log.warn("Problem getting legend", e);
                 throw new MetadataException(
                         "You must specify either SLD, SLD_BODY, LAYERS and STYLES, or LAYER and STYLE for a full legend.  You may set COLORBARONLY=true to just generate a colour bar");
             }

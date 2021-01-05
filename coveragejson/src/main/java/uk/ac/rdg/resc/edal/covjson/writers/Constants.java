@@ -1,9 +1,6 @@
 package uk.ac.rdg.resc.edal.covjson.writers;
 
-import java.util.Locale;
-
-import org.geotoolkit.metadata.iso.citation.Citations;
-import org.geotoolkit.referencing.IdentifiedObjects;
+import org.apache.sis.referencing.IdentifiedObjects;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.util.FactoryException;
 
@@ -105,13 +102,13 @@ public final class Constants {
         public static String getCrsUri(CoordinateReferenceSystem crs) {
             String crsUri;
             try {
-                crsUri = IdentifiedObjects.lookupIdentifier(Citations.HTTP_OGC, crs, true);
+                crsUri = IdentifiedObjects.lookupURN(crs, null);
             } catch (FactoryException e) {
                 throw new RuntimeException(e);
             }
             if (crsUri != null && crsUri.startsWith("urn:ogc:")) {
                 crsUri = "http://www.opengis.net/"
-                        + crsUri.substring(8).replace(':', '/').toLowerCase(Locale.US);
+                        + crsUri.substring(8).replace(':', '/');
             }
             return crsUri;
         }

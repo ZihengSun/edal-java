@@ -1,5 +1,4 @@
 /*******************************************************************************
- * Copyright (c) 2015 The University of Reading
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -36,10 +35,12 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Formatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -181,6 +182,7 @@ public class NetcdfDatasetAggregator {
 
         if (datasetCache.containsKey(location) && !forceRefresh) {
             nc = datasetCache.get(location);
+            log.debug("Reading " + location + " from NetcdfDataset cache");
         } else {
             if (datasetCache.containsKey(location)) {
                 /*
@@ -192,6 +194,7 @@ public class NetcdfDatasetAggregator {
                 nc = datasetCache.get(location);
                 datasetCache.remove(location);
                 nc.close();
+                log.debug("Removing " + location + " from NetcdfDataset cache");
             }
             if (isRemote(location)) {
                 /*
@@ -283,6 +286,12 @@ public class NetcdfDatasetAggregator {
                          * across all variables in all files.
                          */
                         Map<String, Map<String, Number>> varname2Attributes = new HashMap<>();
+                        /*
+                         * If some variables have problems (e.g. inconsistent
+                         * attributes), we will exclude them from the
+                         * aggregation
+                         */
+                        Set<String> varsToExclude = new HashSet<>();
                         String timeUnitsTest = null;
                         boolean commonTimeUnits = true;
                         for (File file : files) {
@@ -375,20 +384,23 @@ public class NetcdfDatasetAggregator {
                                                      * variable with the same
                                                      * name.
                                                      */
-                                                    throw new MetadataException(
+                                                    varsToExclude.add(varName);
+                                                    log.error(
                                                             "Trying to aggregate NetCDF files, but the variable "
                                                                     + varName + " in "
                                                                     + file.getAbsolutePath()
                                                                     + " has the attribute "
                                                                     + attr.getFullName()
                                                                     + " which did not exist in another file in the aggregation.  "
-                                                                    + "This attribute must match across all files in the aggregation.");
+                                                                    + "This attribute must match across all files in the aggregation.  "
+                                                                    + "This variable will not appear in the dataset");
                                                 } else {
                                                     Number value = attr.getNumericValue();
                                                     Number previousValue = attributes
                                                             .get(attr.getFullName());
                                                     if (value == null) {
-                                                        throw new MetadataException(
+                                                        varsToExclude.add(varName);
+                                                        log.error(
                                                                 "Trying to aggregate NetCDF files, but the variable "
                                                                         + varName + " in the file "
                                                                         + file.getAbsolutePath()
@@ -396,10 +408,17 @@ public class NetcdfDatasetAggregator {
                                                                         + attr.getFullName()
                                                                         + " without a numeric value.  In a previous file, this was seen to have the value "
                                                                         + previousValue
-                                                                        + "This variable attribute must match across all files in the aggregation.");
+                                                                        + "This variable attribute must match across all files in the aggregation.  "
+                                                                        + "This variable will not appear in the dataset");
                                                     } else if (previousValue.doubleValue() != value
-                                                            .doubleValue()) {
-                                                        throw new MetadataException(
+                                                            .doubleValue()
+                                                            && !(Double.isNaN(
+                                                                    previousValue.doubleValue())
+                                                                    && Double.isNaN(
+                                                                            value.doubleValue()))
+                                                            ) {
+                                                        varsToExclude.add(varName);
+                                                        log.error(
                                                                 "Trying to aggregate NetCDF files, but the variable "
                                                                         + varName + " in the file "
                                                                         + file.getAbsolutePath()
@@ -411,7 +430,8 @@ public class NetcdfDatasetAggregator {
                                                                         + " on " + varName
                                                                         + " in a different file. ("
                                                                         + previousValue
-                                                                        + "). This variable attribute must match across all files in the aggregation.");
+                                                                        + "). This variable attribute must match across all files in the aggregation.  "
+                                                                        + "This variable will not appear in the dataset");
                                                     }
                                                 }
                                             }
@@ -489,7 +509,16 @@ public class NetcdfDatasetAggregator {
                                             + TimeUtils.dateTimeToISO8601(new DateTime(time))
                                             + "\"");
                                 }
-                                ncmlStringBuffer.append("/>");
+                                if (varsToExclude.isEmpty()) {
+                                    ncmlStringBuffer.append("/>");
+                                } else {
+                                    ncmlStringBuffer.append(">");
+                                    for (String var : varsToExclude) {
+                                        ncmlStringBuffer.append("<remove name=\"" + var
+                                                + "\" type=\"variable\" />");
+                                    }
+                                    ncmlStringBuffer.append("</netcdf>");
+                                }
                             } else {
                                 ncmlStringBuffer.append("<netcdf><aggregation type=\"union\">");
                                 for (Entry<String, String> entry : vars2filename.entrySet()) {
@@ -517,11 +546,12 @@ public class NetcdfDatasetAggregator {
                         /*
                          * Standard NcML
                          */
-                        nc = NcMLReader.readNcML(new StringReader(ncmlString.ncml), null);
+                        nc = NcMLReader.readNcML(new StringReader(ncmlString.ncml), location, null);
                     }
                 }
             }
             datasetCache.put(location, nc);
+            log.debug("Adding " + location + " to the NetcdfDataset cache");
         }
         /*
          * Mark this dataset as active. It will not be removed from the cache
@@ -621,7 +651,13 @@ public class NetcdfDatasetAggregator {
                  * handles, in which case the server admin will need to increase
                  * the number of available handles on the server.
                  */
-                nc = NetcdfDataset.openDataset(location);
+                if (location.endsWith("ncml")) {
+                    ServiceType serviceType = isRemote(location) ? ServiceType.OPENDAP
+                            : ServiceType.NCML;
+                    nc = NetcdfDataset.acquireDataset(new DatasetUrl(serviceType, location), null);
+                } else {
+                    nc = NetcdfDataset.openDataset(location);
+                }
             }
         } catch (IOException e) {
             throw new DataReadingException("Problem reading underlying NetCDF dataset", e);

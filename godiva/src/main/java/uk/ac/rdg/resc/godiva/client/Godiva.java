@@ -341,7 +341,7 @@ public class Godiva extends BaseWmsClient implements AviExportHandler {
                      * This is a separate method so that subclasses can change
                      * the behaviour once the menu is loaded
                      */
-                    JSONValue jsonMap = JSONParser.parseLenient(response.getText());
+                    JSONValue jsonMap = JSONParser.parseStrict(response.getText());
                     JSONObject parentObj = jsonMap.isObject();
                     LayerMenuItem menuTree = LayerTreeJSONParser.getTreeFromJson(wmsUrl, parentObj);
 
@@ -893,7 +893,7 @@ public class Godiva extends BaseWmsClient implements AviExportHandler {
         }
 
         String godivaPath = Window.Location.getPath();
-        screenshot.setHref(Window.Location.getProtocol() + "//" + Window.Location.getHost() + "/"
+        screenshot.setHref(Window.Location.getProtocol() + "//" + Window.Location.getHost()
                 + godivaPath.substring(0, godivaPath.lastIndexOf('/'))
                 + "/screenshots/createScreenshot?" + urlParams);
     }
